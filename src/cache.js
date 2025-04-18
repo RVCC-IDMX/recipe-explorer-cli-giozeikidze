@@ -22,8 +22,12 @@ export async function initializeCache() {
   try {
     await fs.access(CACHE_FILE);
   } catch (error) {
-    await fs.mkdir(path.dirname(CACHE_FILE), { recursive: true });
-    await fs.writeFile(CACHE_FILE, JSON.stringify({}), 'utf-8');
+    try {
+      await fs.mkdir(path.dirname(CACHE_FILE), { recursive: true });
+      await fs.writeFile(CACHE_FILE, JSON.stringify({}), 'utf-8');
+    } catch (writeError) {
+      console.error('Error initializing cache:', writeError.message);
+    }
   }
 }
 
@@ -34,7 +38,7 @@ export async function getFromCache(key) {
   try {
     const data = JSON.parse(await fs.readFile(CACHE_FILE, 'utf-8'));
     if (data[key] && Date.now() - data[key].timestamp < CACHE_DURATION) {
-      return data[key].value;
+      return data[key].data;
     }
     return null;
   } catch (error) {
@@ -49,7 +53,7 @@ export async function saveToCache(key, value) {
   try {
     await initializeCache();
     const data = JSON.parse(await fs.readFile(CACHE_FILE, 'utf-8'));
-    data[key] = { timestamp: Date.now(), value };
+    data[key] = { timestamp: Date.now(), data: value };
     await fs.writeFile(CACHE_FILE, JSON.stringify(data), 'utf-8');
     return true;
   } catch (error) {
@@ -98,10 +102,14 @@ export async function getCachedOrFetch(key, fetchFn, forceRefresh = false) {
     return freshData;
   } catch (error) {
     try {
-      return await getFromCache(key);
+      const data = JSON.parse(await fs.readFile(CACHE_FILE, 'utf-8'));
+      if (data[key]) {
+        return data[key].data;
+      }
     } catch {
-      return null;
+      // Fallback failed
     }
+    return null;
   }
 }
 

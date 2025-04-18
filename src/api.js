@@ -2,9 +2,17 @@ const BASE_URL = 'https://www.themealdb.com/api/json/v1/1';
 
 export async function searchMealsByName(query) {
   try {
-    const response = await fetch(`${BASE_URL}/search.php?s=${encodeURIComponent(query)}`);
+    console.log(`Searching for: ${query}`);
+    const url = `${BASE_URL}/search.php?s=${encodeURIComponent(query)}`;
+    console.log(`Request URL: ${url}`);
+
+    const response = await fetch(url);
     if (!response.ok) throw new Error(`HTTP error! Status: ${response.status}`);
+
     const data = await response.json();
+    // console.log('API response:', data);
+
+    // Ensure we're properly handling the API response
     return data.meals || [];
   } catch (error) {
     console.error('Error searching meals by name:', error);
@@ -28,16 +36,12 @@ export async function getMealById(id, attempts = 2) {
   }
 }
 
-export async function searchMealsByFirstLetter(letters) {
+export async function searchMealsByFirstLetter(letter) {
   try {
-    const mealPromises = letters.map(letter =>
-      fetch(`${BASE_URL}/search.php?f=${letter.charAt(0)}`)
-        .then(response => response.ok ? response.json() : { meals: [] })
-        .then(data => data.meals || [])
-        .catch(() => [])
-    );
-    const results = await Promise.all(mealPromises);
-    return [...new Set(results.flat().map(meal => JSON.stringify(meal)))].map(JSON.parse);
+    const response = await fetch(`${BASE_URL}/search.php?f=${letter.charAt(0)}`);
+    if (!response.ok) throw new Error(`HTTP error! Status: ${response.status}`);
+    const data = await response.json();
+    return data.meals || [];
   } catch (error) {
     console.error('Error searching meals by first letter:', error);
     return [];
